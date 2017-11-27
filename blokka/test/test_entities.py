@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from entities import Block, Chain
+from blokka.entities import Block, Chain
 
 
 class TestBlock(unittest.TestCase):

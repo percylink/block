@@ -8,7 +8,7 @@ from blokka.actors import Node
 class TestNode(unittest.TestCase):
 
     def test_on_receive(self):
-        n = Node.start()
+        n = Node.start(node_id='me')
         res = n.ask({'msg': 'hello world'})
         print res
 

@@ -25,10 +25,8 @@ class TestFileBackend(unittest.TestCase):
     def test_save_chain(self):
         chain = Chain(
             blocks=[Block(
-                index='a',
                 timestamp=datetime(2017, 8, 9, 10, 11, 12, tzinfo=pytz.UTC),
                 prev_hash='abcd',
-                hash='1234',
                 data={'foo': 'bar'}
             )])
         self.backend.save_chain(chain, 'n1')
@@ -38,10 +36,8 @@ class TestFileBackend(unittest.TestCase):
     def test_load_chain(self):
         chain = Chain(
             blocks=[Block(
-                index='b',
                 timestamp=datetime(2017, 8, 9, 10, 11, 12, tzinfo=pytz.UTC),
                 prev_hash='xxyy',
-                hash='aabb',
                 data={'foo': 'bar'}
             )])
         json.dump(chain.to_dict(), open(os.path.join(FileBackend.FILE_DIR, 'n2.json'), 'w'))

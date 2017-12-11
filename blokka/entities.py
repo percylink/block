@@ -3,6 +3,7 @@
 import abc
 import json
 from datetime import datetime
+from hashlib import sha256
 
 DATEFORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
@@ -27,25 +28,69 @@ class JSONSerializable(object):
         return cls.from_dict(json.loads(jstr))
 
 
-class Block(JSONSerializable):
+class ObjectEqualMixin(object):
 
-    def __init__(self, index, timestamp, prev_hash, hash, data):
-        """
-        :type index: str
-        :type timestamp: datetime.datetime
-        :type prev_hash: str
-        :type hash: str
-        :type data: dict
-        """
-        self.index = index
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and other.__dict__ == self.__dict__
+
+    def __ne__(self, other):
+        return not self == other
+
+
+class BaseEntity(JSONSerializable, ObjectEqualMixin):
+    pass
+
+
+class Transaction(BaseEntity):
+
+    def __init__(self, seller_id, buyer_id, timestamp, amount):
+        self.seller_id = seller_id
+        self.buyer_id = buyer_id
         self.timestamp = timestamp
-        self.prev_hash = prev_hash
-        self.hash = hash
-        self.data = data
+        self.amount = amount
+
+    @property
+    def hash(self):
+        return sha256(self.to_json()).hexdigest()
 
     def to_dict(self):
         return {
-            'index': self.index,
+            'seller_id': self.seller_id,
+            'buyer_id': self.buyer_id,
+            'timestamp': self.timestamp.strftime(DATEFORMAT),
+            'amount': self.amount
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(
+            seller_id=dct['seller_id'],
+            buyer_id=dct['buyer_id'],
+            timestamp=datetime.strptime(dct['timestamp'], DATEFORMAT),
+            amount=dct['amount']
+        )
+
+
+class Block(BaseEntity):
+
+    def __init__(self, timestamp, prev_hash, data):
+        """
+        :type timestamp: datetime.datetime
+        :type prev_hash: str
+        :type data: dict
+        """
+        self.timestamp = timestamp
+        self.prev_hash = prev_hash
+        self.data = data
+
+        self.hash = self.__make_hash()
+
+    def __make_hash(self):
+        raw = [self.timestamp.strftime(DATEFORMAT), self.prev_hash, self.data]
+        return sha256(json.dumps(raw)).hexdigest()
+
+    def to_dict(self):
+        return {
             'timestamp': self.timestamp.strftime(DATEFORMAT),
             'prev_hash': self.prev_hash,
             'hash': self.hash,
@@ -55,15 +100,13 @@ class Block(JSONSerializable):
     @classmethod
     def from_dict(cls, dct):
         return cls(
-            index=dct['index'],
             timestamp=datetime.strptime(dct['timestamp'], DATEFORMAT),
             prev_hash=dct['prev_hash'],
-            hash=dct['hash'],
             data=dct['data']
         )
 
 
-class Chain(JSONSerializable):
+class Chain(BaseEntity):
 
     def __init__(self, blocks):
         """
@@ -92,6 +135,13 @@ class Chain(JSONSerializable):
                              "last block in the chain")
         self.blocks.append(block)
 
+    def remove_latest_block(self):
+        """
+        Remove last block in the chain
+        """
+        if len(self.blocks) > 0:
+            self.blocks = self.blocks[:-1]
+
     def latest_hash(self):
         """
         Return the hash of the last block in the chain, or None if the chain has no blocks
@@ -101,3 +151,7 @@ class Chain(JSONSerializable):
             return None
         else:
             return self.blocks[-1].hash
+
+    @property
+    def length(self):
+        return len(self.blocks)

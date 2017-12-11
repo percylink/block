@@ -47,5 +47,8 @@ class FileBackend(ChainBackend):
         :type node_id: str
         :rtype: blokka.entities.Chain
         """
-        dct = json.load(open(self.__file_path(node_id), 'r'))
-        return Chain.from_dict(dct)
+        try:
+            dct = json.load(open(self.__file_path(node_id), 'r'))
+            return Chain.from_dict(dct)
+        except IOError:
+            return None

@@ -114,7 +114,7 @@ class Node(ThreadingActor):
             # If rejected by more than allowed fraction, remove the last block
 
     def receive_chain(self, chain):
-        if chain.length > self.chain.length:
+        if (chain.length > self.chain.length) or (chain == self.chain):
             self.chain_backend.save_chain(chain, self.node_id)
             return ACCEPTED
         else:

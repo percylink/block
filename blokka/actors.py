@@ -103,15 +103,14 @@ class Node(ThreadingActor):
         self.share_chain()
 
     def share_chain(self):
-        responses = []
-        for peer in self.peer_proxies:
-            response = peer.receive_chain(self.chain).get()
-            responses.append(response)
-        counts = Counter(responses)
-        if float(len(counts[REJECTED])) / len(responses) > self.REJECTION_THRESH_FRAC:
-            self.chain
+        responses = [peer.receive_chain(self.chain) for peer in self.peer_proxies]
+        counts = Counter([r.get() for r in responses])
+        if float(counts[REJECTED]) / len(responses) > self.REJECTION_THRESH_FRAC:
             # Keep a count of fraction of peers who accept vs reject
             # If rejected by more than allowed fraction, remove the last block
+            self.logger.warning('{} of {} peers rejected my shared chain; removing last '
+                                'block.'.format(counts[REJECTED], len(responses)))
+            self.chain.remove_latest_block()
 
     def receive_chain(self, chain):
         if (chain.length > self.chain.length) or (chain == self.chain):

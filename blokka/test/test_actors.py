@@ -207,7 +207,102 @@ class TestNode(unittest.TestCase):
             n1.stop()
 
     def test_share_chain_accepted(self):
-        self.fail()
+        try:
+            blk = {
+                'timestamp': '2017-01-02T03:04:05.000123Z',
+                'prev_hash': '1234',
+                'data': {'foo': 'bar'}
+            }
+            blk2 = {
+                'timestamp': '2017-01-02T03:04:05.000123Z',
+                'prev_hash': Block.from_dict(blk).hash,
+                'data': {'woo': 'hoo'}
+            }
+            dct = {
+                'blocks': [blk, blk2]
+            }
+            chain = Chain.from_dict(dct)
+            node_id = 'blah'
+            backend = MockFileBackend(chains={node_id: chain})
+            n1 = Node.start(node_id=node_id, backend=backend)
+            p1 = n1.proxy()
+
+            short_chain = Chain.from_dict({'blocks': [blk]})
+            n2 = Node.start(node_id='2', backend=MockFileBackend({'2': short_chain}))
+            n3 = Node.start(node_id='3', backend=MockFileBackend({'3': chain}))
+            blk3 = {
+                'timestamp': '2017-01-02T03:04:05.000123Z',
+                'prev_hash': Block.from_dict(blk).hash,
+                'data': {'p': 'b'}
+            }
+            dct2 = {
+                'blocks': [blk, blk3]
+            }
+            chain2 = Chain.from_dict(dct2)
+            n4 = Node.start(node_id='4', backend=MockFileBackend({'4': chain2}))
+            p2 = n2.proxy()
+            p3 = n3.proxy()
+            p4 = n4.proxy()
+            p1.register_peer(p2)
+            p1.register_peer(p3)
+            p1.register_peer(p4)
+            p1.share_chain().get()
+            for p in [p1, p2, p3]:
+                self.assertEqual(p.chain.get(), chain)
+            self.assertEqual(p4.chain.get(), chain2)
+        finally:
+            n1.stop()
+            n2.stop()
+            n3.stop()
+            n4.stop()
 
     def test_share_chain_rejected(self):
-        self.fail()
+        try:
+            blk = {
+                'timestamp': '2017-01-02T03:04:05.000123Z',
+                'prev_hash': '1234',
+                'data': {'foo': 'bar'}
+            }
+            blk2 = {
+                'timestamp': '2017-01-02T03:04:05.000123Z',
+                'prev_hash': Block.from_dict(blk).hash,
+                'data': {'woo': 'hoo'}
+            }
+            dct = {
+                'blocks': [blk, blk2]
+            }
+            chain = Chain.from_dict(dct)
+            node_id = 'blah'
+            backend = MockFileBackend(chains={node_id: chain})
+            n1 = Node.start(node_id=node_id, backend=backend)
+            p1 = n1.proxy()
+
+            short_chain = Chain.from_dict({'blocks': [blk]})
+            blk3 = {
+                'timestamp': '2017-01-02T03:04:05.000123Z',
+                'prev_hash': Block.from_dict(blk).hash,
+                'data': {'p': 'b'}
+            }
+            dct2 = {
+                'blocks': [blk, blk3]
+            }
+            chain2 = Chain.from_dict(dct2)
+            n2 = Node.start(node_id='2', backend=MockFileBackend({'2': short_chain}))
+            n3 = Node.start(node_id='3', backend=MockFileBackend({'3': chain2}))
+            n4 = Node.start(node_id='4', backend=MockFileBackend({'4': chain2}))
+            p2 = n2.proxy()
+            p3 = n3.proxy()
+            p4 = n4.proxy()
+            p1.register_peer(p2)
+            p1.register_peer(p3)
+            p1.register_peer(p4)
+            p1.share_chain().get()
+            self.assertEqual(p1.chain.get(), short_chain)
+            self.assertEqual(p2.chain.get(), short_chain)
+            self.assertEqual(p3.chain.get(), chain2)
+            self.assertEqual(p4.chain.get(), chain2)
+        finally:
+            n1.stop()
+            n2.stop()
+            n3.stop()
+            n4.stop()
